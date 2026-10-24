@@ -63,9 +63,21 @@ function afficher() {
   try { localStorage.setItem("panier", JSON.stringify(panier)); } catch (e) {}
 }
 function valider() {
-  const total = document.getElementById("total").textContent;
-  if (total === "0") { alert("Votre panier est vide."); return; }
-  alert("Commande de " + total + " MRU prête. L'enregistrement viendra à l'étape suivante.");
+  const total = Number(document.getElementById("total").textContent);
+  if (total === 0) { alert("Votre panier est vide."); return; }
+  const lignes = [];
+  PRODUITS.forEach(p => ["cartouche", "carton"].forEach(type => {
+    const q = panier[cle(p.id, type)] || 0;
+    if (q > 0) lignes.push({ produit: p.nom, conditionnement: type, quantite: q, prix_unitaire: p[type] });
+  }));
+  let commandes = [];
+  try { commandes = JSON.parse(localStorage.getItem("commandes")) || []; } catch (e) {}
+  const numero = "TME-" + String(commandes.length + 1).padStart(4, "0");
+  commandes.push({ numero: numero, date: new Date().toLocaleString("fr-FR"), statut: "En attente", total: total, lignes: lignes });
+  try { localStorage.setItem("commandes", JSON.stringify(commandes)); } catch (e) {}
+  panier = {};
+  afficher();
+  alert("Commande " + numero + " enregistrée (statut : En attente).");
 }
 try { panier = JSON.parse(localStorage.getItem("panier")) || {}; } catch (e) { panier = {}; }
 afficher();
