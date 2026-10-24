@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin - Tabac Mauritanie Express</title>
+<style>
+  body { margin:0; font-family:Arial,sans-serif; color:#222; }
+  header { background:#222; color:#fff; padding:16px; text-align:center; }
+  header h1 { margin:0; font-size:20px; }
+  .resume { padding:12px; background:#f4f4f4; font-size:14px; }
+  .cmd { border:2px solid #222; border-radius:10px; margin:12px; padding:12px; }
+  .cmd b { color:#c8102e; }
+  select { width:100%; padding:12px; font-size:16px; margin-top:8px; }
+  small { color:#666; }
+</style>
+</head>
+<body>
+<header><h1>Espace administrateur</h1></header>
+<div class="resume" id="resume"></div>
+<div id="liste"></div>
+<script>
+const STATUTS = ["En attente", "Confirmée", "En préparation", "En livraison", "Livrée", "Annulée"];
+let commandes = [];
+try { commandes = JSON.parse(localStorage.getItem("commandes")) || []; } catch (e) {}
+function changer(i, valeur) {
+  commandes[i].statut = valeur;
+  try { localStorage.setItem("commandes", JSON.stringify(commandes)); } catch (e) {}
+  afficher();
+}
+function afficher() {
+  const att = commandes.filter(c => c.statut === "En attente").length;
+  document.getElementById("resume").textContent =
+    commandes.length + " commande(s) au total, dont " + att + " en attente.";
+  if (commandes.length === 0) {
+    document.getElementById("liste").innerHTML = '<p style="padding:16px">Aucune commande.</p>';
+    return;
+  }
+  document.getElementById("liste").innerHTML = commandes.map((c, i) => {
+    const options = STATUTS.map(s =>
+      '<option' + (s === c.statut ? ' selected' : '') + '>' + s + '</option>').join("");
+    return '<div class="cmd"><b>' + c.numero + '</b><br><small>' + c.date + '</small><br>' +
+      c.lignes.map(l => l.quantite + " × " + l.produit + " (" + l.conditionnement + ")").join("<br>") +
+      '<br><b>Total : ' + c.total + ' MRU</b>' +
+      '<select onchange="changer(' + i + ', this.value)">' + options + '</select></div>';
+  }).reverse().join("");
+}
+afficher();
+</script>
+</body>
+</html>
