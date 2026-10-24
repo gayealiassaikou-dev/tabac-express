@@ -62,14 +62,29 @@ function afficher() {
   document.getElementById("detail").textContent = nb ? "(" + nb + " article(s))" : "";
   try { localStorage.setItem("panier", JSON.stringify(panier)); } catch (e) {}
 }
-function valider() {
+async function valider() {
   const total = Number(document.getElementById("total").textContent);
   if (total === 0) { alert("Votre panier est vide."); return; }
+  const boutique = prompt("Nom de votre boutique :");
+  if (!boutique) { return; }
+  const telephone = prompt("Votre numéro de téléphone :");
+  if (!telephone) { return; }
   const lignes = [];
   PRODUITS.forEach(p => ["cartouche", "carton"].forEach(type => {
     const q = panier[cle(p.id, type)] || 0;
     if (q > 0) lignes.push({ produit: p.nom, conditionnement: type, quantite: q, prix_unitaire: p[type] });
   }));
+  try {
+    const r = await fetch(SUPABASE_URL + "/rest/v1/commandes", {
+      method: "POST",
+      headers: { apikey: SUPABASE_KEY, "Content-Type": "application/json", Prefer: "return=minimal" },
+      body: JSON.stringify({ boutique: boutique, telephone: telephone, lignes: lignes, total: total })
+    });
+    if (!r.ok) throw new Error(r.status);
+  } catch (e) {
+    alert("La commande n'a pas pu être envoyée. Vérifiez votre connexion et réessayez.");
+    return;
+  }
   let commandes = [];
   try { commandes = JSON.parse(localStorage.getItem("commandes")) || []; } catch (e) {}
   const numero = "TME-" + String(commandes.length + 1).padStart(4, "0");
@@ -77,7 +92,7 @@ function valider() {
   try { localStorage.setItem("commandes", JSON.stringify(commandes)); } catch (e) {}
   panier = {};
   afficher();
-  alert("Commande " + numero + " enregistrée (statut : En attente).");
+  alert("Commande envoyée ! Nous vous contacterons pour la confirmer.");
 }
 try { panier = JSON.parse(localStorage.getItem("panier")) || {}; } catch (e) { panier = {}; }
 const SUPABASE_URL = "https://szyegriofpvgjrukfbto.supabase.co";

@@ -8,44 +8,103 @@
   body { margin:0; font-family:Arial,sans-serif; color:#222; }
   header { background:#222; color:#fff; padding:16px; text-align:center; }
   header h1 { margin:0; font-size:20px; }
-  .resume { padding:12px; background:#f4f4f4; font-size:14px; }
-  .cmd { border:2px solid #222; border-radius:10px; margin:12px; padding:12px; }
+  .bloc { padding:16px; }
+  input { width:100%; box-sizing:border-box; padding:12px; font-size:16px; margin:6px 0; }
+  button { padding:12px; font-size:16px; border:none; border-radius:8px; background:#c8102e; color:#fff; margin:4px 0; }
+  button.gris { background:#666; }
+  .cmd { border:2px solid #222; border-radius:10px; margin:12px 0; padding:12px; }
   .cmd b { color:#c8102e; }
   select { width:100%; padding:12px; font-size:16px; margin-top:8px; }
   small { color:#666; }
+  #msg { color:#c8102e; }
 </style>
 </head>
 <body>
 <header><h1>Espace administrateur</h1></header>
-<div class="resume" id="resume"></div>
-<div id="liste"></div>
+<div class="bloc" id="login">
+  <input id="email" type="email" placeholder="E-mail" autocomplete="username">
+  <input id="mdp" type="password" placeholder="Mot de passe" autocomplete="current-password">
+  <button onclick="connecter()">Se connecter</button>
+  <p id="msg"></p>
+</div>
+<div class="bloc" id="app" style="display:none">
+  <div id="resume"></div>
+  <button onclick="charger()">Rafraîchir</button>
+  <button class="gris" onclick="deconnecter()">Déconnexion</button>
+  <div id="liste"></div>
+</div>
 <script>
+const URL_SB = "https://szyegriofpvgjrukfbto.supabase.co";
+const KEY = "sb_publishable_bc1uBcwArMaeTkzJP5USuw_JT7Mg1xe";
 const STATUTS = ["En attente", "Confirmée", "En préparation", "En livraison", "Livrée", "Annulée"];
+let token = null;
 let commandes = [];
-try { commandes = JSON.parse(localStorage.getItem("commandes")) || []; } catch (e) {}
-function changer(i, valeur) {
-  commandes[i].statut = valeur;
-  try { localStorage.setItem("commandes", JSON.stringify(commandes)); } catch (e) {}
-  afficher();
+function esc(t) {
+  return String(t == null ? "" : t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+async function connecter() {
+  const email = document.getElementById("email").value.trim();
+  const mdp = document.getElementById("mdp").value;
+  const msg = document.getElementById("msg");
+  msg.textContent = "Connexion...";
+  try {
+    const r = await fetch(URL_SB + "/auth/v1/token?grant_type=password", {
+      method: "POST",
+      headers: { apikey: KEY, "Content-Type": "application/json" },
+      body: JSON.stringify({ email: email, password: mdp })
+    });
+    if (!r.ok) throw new Error(r.status);
+    const d = await r.json();
+    token = d.access_token;
+    document.getElementById("mdp").value = "";
+    msg.textContent = "";
+    document.getElementById("login").style.display = "none";
+    document.getElementById("app").style.display = "block";
+    charger();
+  } catch (e) {
+    msg.textContent = "Connexion refusée. Vérifiez l'e-mail et le mot de passe.";
+  }
+}
+function deconnecter() {
+  token = null; commandes = [];
+  document.getElementById("app").style.display = "none";
+  document.getElementById("login").style.display = "block";
+}
+async function charger() {
+  try {
+    const r = await fetch(URL_SB + "/rest/v1/commandes?select=*&order=id.desc", {
+      headers: { apikey: KEY, Authorization: "Bearer " + token }
+    });
+    if (!r.ok) throw new Error(r.status);
+    commandes = await r.json();
+    afficher();
+  } catch (e) {
+    document.getElementById("resume").textContent = "Impossible de charger les commandes.";
+  }
+}
+async function changer(id, valeur) {
+  try {
+    const r = await fetch(URL_SB + "/rest/v1/commandes?id=eq." + Number(id), {
+      method: "PATCH",
+      headers: { apikey: KEY, Authorization: "Bearer " + token, "Content-Type": "application/json" },
+      body: JSON.stringify({ statut: valeur })
+    });
+    if (!r.ok) throw new Error(r.status);
+  } catch (e) { alert("Le statut n'a pas pu être changé."); }
+  charger();
 }
 function afficher() {
   const att = commandes.filter(c => c.statut === "En attente").length;
-  document.getElementById("resume").textContent =
-    commandes.length + " commande(s) au total, dont " + att + " en attente.";
-  if (commandes.length === 0) {
-    document.getElementById("liste").innerHTML = '<p style="padding:16px">Aucune commande.</p>';
-    return;
-  }
-  document.getElementById("liste").innerHTML = commandes.map((c, i) => {
-    const options = STATUTS.map(s =>
-      '<option' + (s === c.statut ? ' selected' : '') + '>' + s + '</option>').join("");
-    return '<div class="cmd"><b>' + c.numero + '</b><br><small>' + c.date + '</small><br>' +
-      c.lignes.map(l => l.quantite + " × " + l.produit + " (" + l.conditionnement + ")").join("<br>") +
-      '<br><b>Total : ' + c.total + ' MRU</b>' +
-      '<select onchange="changer(' + i + ', this.value)">' + options + '</select></div>';
-  }).reverse().join("");
+  document.getElementById("resume").textContent = commandes.length + " commande(s), dont " + att + " en attente.";
+  document.getElementById("liste").innerHTML = commandes.map(c => {
+    const options = STATUTS.map(s => '<option' + (s === c.statut ? ' selected' : '') + '>' + esc(s) + '</option>').join("");
+    const lignes = (c.lignes || []).map(l => esc(l.quantite) + " × " + esc(l.produit) + " (" + esc(l.conditionnement) + ")").join("<br>");
+    return '<div class="cmd"><b>N° ' + esc(c.id) + '</b> — ' + esc(c.boutique) + '<br>' +
+      '<small>Tél : ' + esc(c.telephone) + ' — ' + esc(new Date(c.created_at).toLocaleString("fr-FR")) + '</small><br>' +
+      lignes + '<br><b>Total : ' + esc(c.total) + ' MRU</b>' +
+      '<select onchange="changer(' + Number(c.id) + ', this.value)">' + options + '</select></div>';
+  }).join("");
 }
-afficher();
 </script>
 </body>
 </html>
