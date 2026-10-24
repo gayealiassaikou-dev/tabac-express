@@ -29,7 +29,7 @@
 </div>
 <script>
 // PRIX PROVISOIRES : à remplacer par les vrais prix (plus tard, depuis l'espace admin)
-const PRODUITS = [
+let PRODUITS = [
   { id:1, nom:"Marlboro Rouge",        cartouche:1000, carton:10000 },
   { id:2, nom:"Marlboro Light",        cartouche:1000, carton:10000 },
   { id:3, nom:"Congress - 1re qualité", cartouche:800,  carton:8000 },
@@ -80,7 +80,18 @@ function valider() {
   alert("Commande " + numero + " enregistrée (statut : En attente).");
 }
 try { panier = JSON.parse(localStorage.getItem("panier")) || {}; } catch (e) { panier = {}; }
+const SUPABASE_URL = "https://szyegriofpvgjrukfbto.supabase.co";
+const SUPABASE_KEY = "sb_publishable_bc1uBcwArMaeTkzJP5USuw_JT7Mg1xe";
 afficher();
+fetch(SUPABASE_URL + "/rest/v1/produits?select=id,nom,prix_cartouche,prix_carton&order=id", { headers: { apikey: SUPABASE_KEY } })
+  .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+  .then(data => {
+    if (data.length) {
+      PRODUITS = data.map(p => ({ id: p.id, nom: p.nom, cartouche: p.prix_cartouche, carton: p.prix_carton }));
+      afficher();
+    }
+  })
+  .catch(e => console.log("Supabase indisponible, prix locaux utilisés", e));
 </script>
 </body>
 </html>
