@@ -87,7 +87,7 @@ async function valider() {
     if (r.status === 401) { localStorage.removeItem("session"); alert("Session expirée. Reconnectez-vous."); location.href = "connexion.html"; return; }
     if (!r.ok) throw new Error(r.status);
   } catch (e) {
-    alert("La commande n'a pas pu être envoyée. Vérifiez votre connexion et réessayez.");
+    alert("La commande n'a pas pu être envoyée. Vérifiez votre connexion et réessayez. (" + e.message + ")");
     return;
   }
   let commandes = [];
