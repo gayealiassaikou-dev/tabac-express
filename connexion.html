@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Connexion - Tabac Mauritanie Express</title><link rel="stylesheet" href="style-tme.css"></head><body>
+<h1>Connexion boutique</h1>
+<p>Connectez-vous pour commander et retrouver vos commandes.</p>
+<input id="email" type="email" placeholder="E-mail" autocomplete="username">
+<input id="mdp" type="password" placeholder="Mot de passe (6 caractères min.)" autocomplete="current-password">
+<button onclick="envoyer('login')">Se connecter</button>
+<button onclick="envoyer('signup')">Créer un compte</button>
+<p id="msg"></p>
+<p><a href="catalogue.html">Retour au catalogue</a></p>
+<script>
+const URL_ = "https://szyegriofpvgjrukfbto.supabase.co";
+const KEY = "sb_publishable_bc1uBcwArMaeTkzJP5USuw_JT7Mg1xe";
+function msg(t) { document.getElementById("msg").textContent = t; }
+async function envoyer(mode) {
+  const email = document.getElementById("email").value.trim();
+  const mdp = document.getElementById("mdp").value;
+  if (!email || mdp.length < 6) { msg("Entrez un e-mail et un mot de passe de 6 caractères minimum."); return; }
+  const chemin = mode === "login" ? "/auth/v1/token?grant_type=password" : "/auth/v1/signup";
+  try {
+    const r = await fetch(URL_ + chemin, { method: "POST", headers: { apikey: KEY, "Content-Type": "application/json" }, body: JSON.stringify({ email: email, password: mdp }) });
+    const d = await r.json();
+    if (!r.ok) { msg(d.msg || d.error_description || "Erreur, réessayez."); return; }
+    if (d.access_token) {
+      localStorage.setItem("session", JSON.stringify({ token: d.access_token, refresh: d.refresh_token, user_id: d.user.id, email: email }));
+      location.href = "catalogue.html";
+    } else { msg("Compte créé. Vérifiez votre e-mail puis connectez-vous."); }
+  } catch (e) { msg("Connexion impossible. Vérifiez votre réseau."); }
+}
+</script></body></html>
