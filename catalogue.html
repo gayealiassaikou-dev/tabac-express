@@ -37,6 +37,7 @@ let PRODUITS = [
   { id:4, nom:"Congress - 2e qualité",  cartouche:700,  carton:7000 },
   { id:5, nom:"Oris",                   cartouche:600,  carton:6000 }
 ];
+const MODE_PANIER = location.hash === "#panier";
 let panier = {};
 function cle(id, type) { return id + "_" + type; }
 function changer(id, type, delta) {
@@ -56,9 +57,10 @@ function afficher() {
         '<span>' + q + '</span>' +
         '<button onclick="changer(' + p.id + ',\'' + type + '\',1)">+</button></div></div>';
     };
+    if (MODE_PANIER ? !(panier[cle(p.id,"cartouche")] || panier[cle(p.id,"carton")]) : false) return "";
     return '<div class="produit"><h2>' + p.nom + '</h2>' + ligne("cartouche") + ligne("carton") + '</div>';
   }).join("");
-  document.getElementById("liste").innerHTML = html;
+  document.getElementById("liste").innerHTML = (MODE_PANIER ? total === 0 : false) ? "<p style=padding:20px>Votre panier est vide.</p>" : html;
   document.getElementById("total").textContent = total;
   document.getElementById("detail").textContent = nb ? "(" + nb + " article(s))" : "";
   try { localStorage.setItem("panier", JSON.stringify(panier)); } catch (e) {}
