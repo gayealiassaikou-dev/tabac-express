@@ -20,18 +20,34 @@
 <header><a class="retour" href="index.html">&larr; Accueil</a><h1>Mes commandes</h1></header>
 <div id="liste"></div>
 <script>
-let commandes = [];
-try { commandes = JSON.parse(localStorage.getItem("commandes")) || []; } catch (e) {}
 const el = document.getElementById("liste");
-if (commandes.length === 0) {
-  el.innerHTML = '<p style="padding:16px">Aucune commande pour le moment.</p>';
+function esc(t) { return String(t == null ? "" : t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+let session = null;
+try { session = JSON.parse(localStorage.getItem("session")); } catch (e) {}
+if (!session || !session.token) {
+  el.innerHTML = '<p style="padding:16px">Connectez-vous pour voir vos commandes. <a href="connexion.html">Se connecter</a></p>';
 } else {
-  el.innerHTML = commandes.slice().reverse().map(c =>
-    '<div class="cmd"><b>' + c.numero + '</b> <span class="statut">' + c.statut + '</span><br>' +
-    '<small>' + c.date + '</small><br>' +
-    c.lignes.map(l => l.quantite + " × " + l.produit + " (" + l.conditionnement + ")").join("<br>") +
-    '<br><b>Total : ' + c.total + ' MRU</b></div>'
-  ).join("");
+  fetch("https://szyegriofpvgjrukfbto.supabase.co/rest/v1/commandes?select=*&user_id=eq." + encodeURIComponent(session.user_id) + "&order=id.desc", {
+    headers: { apikey: "sb_publishable_bc1uBcwArMaeTkzJP5USuw_JT7Mg1xe", Authorization: "Bearer " + session.token }
+  })
+  .then(r => {
+    if (r.status === 401) { localStorage.removeItem("session"); location.href = "connexion.html"; return null; }
+    if (!r.ok) throw new Error(r.status);
+    return r.json();
+  })
+  .then(cmds => {
+    if (!cmds) return;
+    if (cmds.length === 0) { el.innerHTML = '<p style="padding:16px">Aucune commande pour le moment.</p>'; return; }
+    el.innerHTML = cmds.map(c => {
+      let lignes = c.lignes;
+      if (typeof lignes === "string") { try { lignes = JSON.parse(lignes); } catch (e) { lignes = []; } }
+      return '<div class="cmd"><b>TME-' + String(c.id).padStart(4, "0") + '</b> <span class="statut">' + esc(c.statut) + '</span><br>' +
+        '<small>' + esc(new Date(c.created_at).toLocaleString("fr-FR")) + '</small><br>' +
+        (lignes || []).map(l => esc(l.quantite) + " × " + esc(l.produit) + " (" + esc(l.conditionnement) + ")").join("<br>") +
+        '<br><b>Total : ' + esc(c.total) + ' MRU</b></div>';
+    }).join("");
+  })
+  .catch(e => { el.innerHTML = '<p style="padding:16px">Impossible de charger vos commandes. (' + esc(e.message) + ')</p>'; });
 }
 </script>
 </body>
