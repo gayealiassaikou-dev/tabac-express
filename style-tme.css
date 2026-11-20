@@ -44,7 +44,8 @@ button.gris {
 
 /* Fond commun Tabac Mauritanie Express */
 body {
-  background-image: url("fond-tabac-mauritanie-express.jpg") !important;
+  background-image: none !important;
+  background-color: #140a0a !important;
   background-position: center top;
   background-size: cover;
   background-repeat: no-repeat;
