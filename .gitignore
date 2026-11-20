@@ -1,0 +1,5 @@
+*.bak*
+*.original
+*.avant-*
+node_modules/
+.env
